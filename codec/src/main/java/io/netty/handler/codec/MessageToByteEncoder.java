@@ -42,6 +42,7 @@ import io.netty.util.internal.TypeParameterMatcher;
  *         }
  *     }
  * </pre>
+ * Encoder过程是由用户发起的，所以继承 ChannelOutboundHandlerAdapter outbound事件
  */
 public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdapter {
 

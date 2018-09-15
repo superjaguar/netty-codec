@@ -27,6 +27,8 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 
+// recycle 代码通过一个Recycler类来进行对象池管理，其内部是通过thread-local+queue来实现的。而Unpool，则只是简单的进行buf的用完即销毁策略。
+// 但是pool也有discard与clear可以回收无用的内存，但是好像需要进行内存复制
 final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
 
     private static final Recycler<PooledDirectByteBuf> RECYCLER = new Recycler<PooledDirectByteBuf>() {

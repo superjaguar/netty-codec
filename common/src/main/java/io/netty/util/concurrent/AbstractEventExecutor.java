@@ -157,6 +157,7 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
 
     /**
      * Try to execute the given {@link Runnable} and just log if it throws a {@link Throwable}.
+     * 执行任务队列中的
      */
     protected static void safeExecute(Runnable task) {
         try {

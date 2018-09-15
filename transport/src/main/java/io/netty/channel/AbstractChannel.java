@@ -55,6 +55,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private static final NotYetConnectedException FLUSH0_NOT_YET_CONNECTED_EXCEPTION = ThrowableUtil.unknownStackTrace(
             new NotYetConnectedException(), AbstractUnsafe.class, "flush0()");
 
+    // 父类的Channel
     private final Channel parent;
     private final ChannelId id;
     private final Unsafe unsafe;
@@ -87,7 +88,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     /**
      * Creates a new instance.
-     *
+     * 抽象方法不能被实例化，只能在子类中实例化时传入相应参数。
      * @param parent
      *        the parent of this channel. {@code null} if there's no parent.
      */
@@ -218,6 +219,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         return pipeline.bind(localAddress);
     }
 
+    /**
+     * 调用Pipeline中的Connet
+     * @param remoteAddress
+     * @return
+     */
     @Override
     public ChannelFuture connect(SocketAddress remoteAddress) {
         return pipeline.connect(remoteAddress);
@@ -455,6 +461,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             return remoteAddress0();
         }
 
+        /**
+         * 将当前Channel注册到EventLoop上
+         * 实际的I/O读写操作都是由Unsafe接口负责完成的。
+         * @param eventLoop
+         * @param promise
+         */
         @Override
         public final void register(EventLoop eventLoop, final ChannelPromise promise) {
             if (eventLoop == null) {
@@ -856,6 +868,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
         }
 
+        /**
+         * 将消息内容写入环形数组 ChannelOutboundBuffer
+         * @param msg
+         * @param promise
+         */
         @Override
         public final void write(Object msg, ChannelPromise promise) {
             assertEventLoop();
@@ -884,10 +901,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 ReferenceCountUtil.release(msg);
                 return;
             }
-
+            // 将需要发送的消息添加到环形数组中。
             outboundBuffer.addMessage(msg, size, promise);
         }
 
+        /**
+         * flush方法负责将发送缓冲区中待发送的消息全部写入到Channel中，并发送给通信对方。
+         */
         @Override
         public final void flush() {
             assertEventLoop();

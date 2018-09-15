@@ -52,7 +52,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
             logger.debug("-D{}: {}", PROP_MODE, checkAccessible);
         }
     }
-
+    // ByteBuf实例公用的内存泄漏检测器
     static final ResourceLeakDetector<ByteBuf> leakDetector =
             ResourceLeakDetectorFactory.instance().newResourceLeakDetector(ByteBuf.class);
 
@@ -867,6 +867,14 @@ public abstract class AbstractByteBuf extends ByteBuf {
         return slice;
     }
 
+    /**
+     * 从当前ByteBuf实例中读取 readIndex 开始 到 readIndex+length 位置的数据到 dst中，dst的起始位置为dstIndex
+     * @param dst 目标数组
+     * @param dstIndex the first index of the destination
+     * @param length   the number of bytes to transfer
+     *
+     * @return
+     */
     @Override
     public ByteBuf readBytes(byte[] dst, int dstIndex, int length) {
         checkReadableBytes(length);

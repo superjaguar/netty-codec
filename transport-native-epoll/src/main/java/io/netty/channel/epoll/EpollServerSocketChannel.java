@@ -71,6 +71,7 @@ public final class EpollServerSocketChannel extends AbstractEpollServerChannel i
         if (Native.IS_SUPPORTING_TCP_FASTOPEN && config.getTcpFastopen() > 0) {
             socket.setTcpFastOpen(config.getTcpFastopen());
         }
+        // bind成功之后，当前端口进入LISTEN状态
         socket.listen(config.getBacklog());
         active = true;
     }

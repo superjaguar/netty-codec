@@ -44,7 +44,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 /**
  * Abstract base class for {@link OrderedEventExecutor}'s that execute all its submitted tasks in a single thread.
- *
+ * 在一个线程上执行所有被提交过的任务
  */
 public abstract class SingleThreadEventExecutor extends AbstractScheduledEventExecutor implements OrderedEventExecutor {
 
@@ -84,6 +84,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     private volatile Thread thread;
     @SuppressWarnings("unused")
     private volatile ThreadProperties threadProperties;
+    // 任务提交执行的接口
     private final Executor executor;
     private volatile boolean interrupted;
 
@@ -351,6 +352,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         boolean ranAtLeastOne = false;
 
         do {
+            // 从scheduledTaskQueue中peek任务到TaskQueue队列
             fetchedAll = fetchFromScheduledTaskQueue();
             if (runAllTasksFrom(taskQueue)) {
                 ranAtLeastOne = true;
@@ -390,6 +392,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * the tasks in the task queue and returns if it ran longer than {@code timeoutNanos}.
      */
     protected boolean runAllTasks(long timeoutNanos) {
+        // fetchFromScheduledTaskQueue把scheduledTaskQueue中已经超过延迟执行时间的任务移到taskQueue中等待被执行。
         fetchFromScheduledTaskQueue();
         Runnable task = pollTask();
         if (task == null) {
@@ -401,12 +404,14 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         long runTasks = 0;
         long lastExecutionTime;
         for (;;) {
+            // 执行从TaskQueue中取出的Task
             safeExecute(task);
 
             runTasks ++;
 
             // Check timeout every 64 tasks because nanoTime() is relatively expensive.
             // XXX: Hard-coded value - will make it configurable if it is really a problem.
+            // 每执行64次检查一下是否已经超时
             if ((runTasks & 0x3F) == 0) {
                 lastExecutionTime = ScheduledFutureTask.nanoTime();
                 if (lastExecutionTime >= deadline) {
@@ -455,7 +460,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     }
 
     /**
-     *
+     * 任务执行的具体内容由子类指定
      */
     protected abstract void run();
 
@@ -764,6 +769,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         boolean inEventLoop = inEventLoop();
         addTask(task);
         if (!inEventLoop) {
+            // 第一次执行任务的时候启动
             startThread();
             if (isShutdown() && removeTask(task)) {
                 reject();
@@ -868,6 +874,9 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         }
     }
 
+    /**
+     * 启动
+     */
     private void doStartThread() {
         assert thread == null;
         executor.execute(new Runnable() {

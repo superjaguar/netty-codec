@@ -33,21 +33,29 @@ import static java.lang.Math.min;
  */
 public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufAllocator {
 
+    // 最小缓冲区长度
     static final int DEFAULT_MINIMUM = 64;
+    // 初始容量
     static final int DEFAULT_INITIAL = 1024;
+    // 最大容量
     static final int DEFAULT_MAXIMUM = 65536;
 
+    // 扩张的步进索引
     private static final int INDEX_INCREMENT = 4;
+    // 收缩的步进索引
     private static final int INDEX_DECREMENT = 1;
 
     private static final int[] SIZE_TABLE;
 
     static {
+        // sizeTable初始化，小于512字节采用步进16的方式；
+        // 当大于512字节时，进行倍增
+        // 相当于一个规则引擎！
         List<Integer> sizeTable = new ArrayList<Integer>();
         for (int i = 16; i < 512; i += 16) {
             sizeTable.add(i);
         }
-
+        // 知道i发生溢出，停止循环
         for (int i = 512; i > 0; i <<= 1) {
             sizeTable.add(i);
         }
@@ -64,6 +72,11 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
     @Deprecated
     public static final AdaptiveRecvByteBufAllocator DEFAULT = new AdaptiveRecvByteBufAllocator();
 
+    /**
+     * 根据容量Size查找容量向量表对应的索引-二分查找法
+     * @param size
+     * @return
+     */
     private static int getSizeTableIndex(final int size) {
         for (int low = 0, high = SIZE_TABLE.length - 1;;) {
             if (high < low) {
@@ -91,7 +104,9 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
     private final class HandleImpl extends MaxMessageHandle {
         private final int minIndex;
         private final int maxIndex;
+        // 当前索引位置
         private int index;
+        // 下一次预分配的Buffer大小
         private int nextReceiveBufferSize;
         private boolean decreaseNow;
 
@@ -103,8 +118,13 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
             nextReceiveBufferSize = SIZE_TABLE[index];
         }
 
+        /**
+         * 当NioSocketChannel执行完读操作后，会计算获得本次轮询读取的总字节数，用于预测下一次读取的字节数量
+         * @param bytes
+         */
         @Override
         public void lastBytesRead(int bytes) {
+            // TODO:好好翻译一下！
             // If we read as much as we asked for we should check if we need to ramp up the size of our next guess.
             // This helps adjust more quickly when large amounts of data is pending and can avoid going back to
             // the selector to check for more data. Going back to the selector can add significant latency for large
@@ -120,6 +140,11 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
             return nextReceiveBufferSize;
         }
 
+        /**
+         * 根据实际读取的字节数对ByteBuf进行动态伸缩和扩张
+         * 为下一次缓冲区容量分配赋值！
+         * @param actualReadBytes
+         */
         private void record(int actualReadBytes) {
             if (actualReadBytes <= SIZE_TABLE[max(0, index - INDEX_DECREMENT - 1)]) {
                 if (decreaseNow) {

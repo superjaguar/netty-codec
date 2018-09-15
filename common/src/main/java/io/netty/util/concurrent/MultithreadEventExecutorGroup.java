@@ -27,13 +27,18 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Abstract base class for {@link EventExecutorGroup} implementations that handles their tasks with multiple threads at
  * the same time.
+ * EventLoopGroup的核心类，负责管理EventLoop的生命周期。
+ * Group分配EventLoop
  */
 public abstract class MultithreadEventExecutorGroup extends AbstractEventExecutorGroup {
 
+    // 保存eventLoop
     private final EventExecutor[] children;
     private final Set<EventExecutor> readonlyChildren;
     private final AtomicInteger terminatedChildren = new AtomicInteger();
     private final Promise<?> terminationFuture = new DefaultPromise(GlobalEventExecutor.INSTANCE);
+
+    // 从children中选取一个eventLoop的策略，核心方法为next() ，next的取值方式根据children的大小是否为2的幂等次方确定
     private final EventExecutorChooserFactory.EventExecutorChooser chooser;
 
     /**
@@ -60,7 +65,7 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
 
     /**
      * Create a new instance.
-     *
+     * 创建一个新的EventLoopGroup线程池
      * @param nThreads          the number of threads that will be used by this instance.
      * @param executor          the Executor to use, or {@code null} if the default should be used.
      * @param chooserFactory    the {@link EventExecutorChooserFactory} to use.
@@ -75,12 +80,15 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
         if (executor == null) {
             executor = new ThreadPerTaskExecutor(newDefaultThreadFactory());
         }
-
+        // EventExecutor
         children = new EventExecutor[nThreads];
 
         for (int i = 0; i < nThreads; i ++) {
             boolean success = false;
             try {
+                // 为每一个 eventLoop 封装一个 EventExecutor
+                // executor 线程池工厂类，初始化线程资源，线程池准备就绪，可以往线程池中提交任务。
+                // 可以选择 EpollEventLoopGroup 作为线程组，性能更好，但是只能运行在Linux系统中
                 children[i] = newChild(executor, args);
                 success = true;
             } catch (Exception e) {
@@ -110,6 +118,15 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
 
         chooser = chooserFactory.newChooser(children);
 
+//        if (isPowerOfTwo(children.length)) {
+//            chooser = new PowerOfTwoEventExecutorChooser();
+//        }
+
+//        private static boolean isPowerOfTwo(int val) {
+//            return (val & -val) == val;
+//        }
+
+        // 添加终止监听
         final FutureListener<Object> terminationListener = new FutureListener<Object>() {
             @Override
             public void operationComplete(Future<Object> future) throws Exception {
@@ -118,11 +135,12 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
                 }
             }
         };
-
+        // 为每一个EventLoop添加终止监听
         for (EventExecutor e: children) {
             e.terminationFuture().addListener(terminationListener);
         }
 
+        // readonlyChildren指向池内的每一个eventLoop
         Set<EventExecutor> childrenSet = new LinkedHashSet<EventExecutor>(children.length);
         Collections.addAll(childrenSet, children);
         readonlyChildren = Collections.unmodifiableSet(childrenSet);

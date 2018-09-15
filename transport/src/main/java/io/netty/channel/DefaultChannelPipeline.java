@@ -40,6 +40,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 /**
+ * channel创建的时候会初始化该实例
  * The default {@link ChannelPipeline} implementation.  It is usually created
  * by a {@link Channel} implementation when the {@link Channel} is created.
  */
@@ -61,9 +62,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private static final AtomicReferenceFieldUpdater<DefaultChannelPipeline, MessageSizeEstimator.Handle> ESTIMATOR =
             AtomicReferenceFieldUpdater.newUpdater(
                     DefaultChannelPipeline.class, MessageSizeEstimator.Handle.class, "estimatorHandle");
+
+    // head和tail都是handler上下文
     final AbstractChannelHandlerContext head;
     final AbstractChannelHandlerContext tail;
 
+    // pipeline所属的channel
     private final Channel channel;
     private final ChannelFuture succeededFuture;
     private final VoidChannelPromise voidPromise;
@@ -629,6 +633,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
+    /**
+     * 通知新的ChannelHandlerContext加入成功
+     * @param ctx
+     */
     private void callHandlerAdded0(final AbstractChannelHandlerContext ctx) {
         try {
             // We must call setAddComplete before calling handlerAdded. Otherwise if the handlerAdded method generates
@@ -854,6 +862,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return buf.toString();
     }
 
+    /**
+     * 触发head中的fireChannelRegistered事件
+     * @return
+     */
     @Override
     public final ChannelPipeline fireChannelRegistered() {
         AbstractChannelHandlerContext.invokeChannelRegistered(head);
@@ -1264,6 +1276,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
+    /**
+     *
+     */
     // A special catch-all handler that handles both bytes and messages.
     final class TailContext extends AbstractChannelHandlerContext implements ChannelInboundHandler {
 

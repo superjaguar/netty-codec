@@ -48,6 +48,11 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioServerSocketChannel.class);
 
+    /**
+     * 用于通过ServerSocketChannel的open方法打开新的ServerSocketChannel通道。
+     * @param provider
+     * @return
+     */
     private static ServerSocketChannel newSocket(SelectorProvider provider) {
         try {
             /**
@@ -62,7 +67,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
                     "Failed to open a server socket.", e);
         }
     }
-
+    // 用于配置tcp参数
     private final ServerSocketChannelConfig config;
 
     /**
@@ -136,8 +141,16 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
         javaChannel().close();
     }
 
+    /**
+     * 每当服务端接入一个新的客户端连接NioSocketChannel时，都会给其分配Reactor线程EventLoop。。
+     * 好像并没有，应该使用的就是当前NioServerSocketChannel线程。
+     * @param buf 由NioMessageUnsafe类(AbstractNioMessageChannel的内部类)维护
+     * @return 1 表示接受客户端连接成功。
+     * @throws Exception
+     */
     @Override
     protected int doReadMessages(List<Object> buf) throws Exception {
+        // 接收客户端的Channel
         SocketChannel ch = SocketUtils.accept(javaChannel());
 
         try {

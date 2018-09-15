@@ -37,8 +37,12 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  */
 public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
 
+    // 用于内存分配
     private final ByteBufAllocator alloc;
+    // 作为数据缓冲区，非池化，在内存中连续的一片区域作为存储区
+    // 初始化阶段会分配定长的byte数组
     byte[] array;
+    // 用于实现ByteBuf到ByteBuffer的转换
     private ByteBuffer tmpNioBuf;
 
     /**
@@ -117,6 +121,12 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
         return array.length;
     }
 
+    /**
+     *
+     * 动态扩展缓冲区实现
+     * @param newCapacity
+     * @return
+     */
     @Override
     public ByteBuf capacity(int newCapacity) {
         checkNewCapacity(newCapacity);

@@ -36,7 +36,9 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     private final ByteBufAllocator alloc;
 
+    // 内部缓冲区由DirectByteBuffer实现，用于存储缓冲区数据
     private ByteBuffer buffer;
+    // 为了与NIO的ByteBuffer进行转换
     private ByteBuffer tmpNioBuf;
     private int capacity;
     private boolean doNotFree;

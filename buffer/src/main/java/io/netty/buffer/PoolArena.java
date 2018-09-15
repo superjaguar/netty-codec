@@ -28,6 +28,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.lang.Math.max;
 
+/**
+ * 内存中一大块连续的区域
+ * @param <T>
+ */
 abstract class PoolArena<T> implements PoolArenaMetric {
     static final boolean HAS_UNSAFE = PlatformDependent.hasUnsafe();
 

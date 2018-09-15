@@ -56,6 +56,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     private final SelectableChannel ch;
     protected final int readInterestOp;
+    // Channel注册到EventLoop之后的返回
     volatile SelectionKey selectionKey;
     boolean readPending;
     private final Runnable clearReadPendingRunnable = new Runnable() {
@@ -405,6 +406,10 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         eventLoop().cancel(selectionKey());
     }
 
+    /**
+     * 准备处理读事件-bind事件触发？
+     * @throws Exception
+     */
     @Override
     protected void doBeginRead() throws Exception {
         // Channel.read() or ChannelHandlerContext.read() was called
@@ -415,8 +420,10 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
         readPending = true;
 
+        // 当前操作位
         final int interestOps = selectionKey.interestOps();
         if ((interestOps & readInterestOp) == 0) {
+            // 在操作位上添加读操作位。
             selectionKey.interestOps(interestOps | readInterestOp);
         }
     }

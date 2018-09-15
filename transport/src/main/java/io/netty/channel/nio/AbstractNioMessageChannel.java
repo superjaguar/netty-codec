@@ -55,10 +55,13 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
         super.doBeginRead();
     }
 
+    /**
+     * NOTE : 是否有新连接进入，NioServerSocketChannel 服务端负责监听是否有新连接接入
+     */
     private final class NioMessageUnsafe extends AbstractNioUnsafe {
 
         private final List<Object> readBuf = new ArrayList<Object>();
-
+        // 调用方为EventLoop中的任务调度执行。processSelectedKey#unsafe.read();
         @Override
         public void read() {
             assert eventLoop().inEventLoop();
@@ -72,6 +75,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
             try {
                 try {
                     do {
+                        // 对NioServerSocketChannel而言，表示接受一个客户端连接。
                         int localRead = doReadMessages(readBuf);
                         if (localRead == 0) {
                             break;
@@ -90,6 +94,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                 int size = readBuf.size();
                 for (int i = 0; i < size; i ++) {
                     readPending = false;
+                    // 服务端接收到一个包
                     pipeline.fireChannelRead(readBuf.get(i));
                 }
                 readBuf.clear();

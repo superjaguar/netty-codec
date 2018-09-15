@@ -44,6 +44,7 @@ public final class RecyclableArrayList extends ArrayList<Object> {
 
     /**
      * Create a new empty {@link RecyclableArrayList} instance
+     * 不是单例实现，容器类不适合作为单例出现，只有服务类比较适合
      */
     public static RecyclableArrayList newInstance() {
         return newInstance(DEFAULT_INITIAL_CAPACITY);

@@ -157,7 +157,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     /**
      * If set then only one message is decoded on each {@link #channelRead(ChannelHandlerContext, Object)}
      * call. This may be useful if you need to do some protocol upgrade and want to make sure nothing is mixed up.
-     *
+     * 设置每次ChannelRead只被解码一次
      * Default is {@code false} as this has performance impacts.
      */
     public void setSingleDecode(boolean singleDecode) {
@@ -250,18 +250,29 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      */
     protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception { }
 
+    /**
+     * Inbound事件，Channel中有可读数据，Selector轮询到有关注的操作位中有关心的读事件？
+     * Channel注册到EventLoop之后的返回SelectionKey，SelectionKey的option保存Channel关心的网络操作位
+     * @param ctx 是被哪个ChannelHandler拦截的
+     * @param msg 在Channel中流转的缓冲字节数组
+     * @throws Exception
+     */
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof ByteBuf) {
+            // 存储解码后的POJO对象
             CodecOutputList out = CodecOutputList.newInstance();
             try {
                 ByteBuf data = (ByteBuf) msg;
+                // cumulation 上一次解码之后留下的半包消息，为空，则表示上一次解码全部解析完成。
                 first = cumulation == null;
                 if (first) {
                     cumulation = data;
                 } else {
+                    // 对cumulation缓冲区进行扩容，扩容后新缓冲区大小 = cumulation.reableBytes() + data.reableBytes()
                     cumulation = cumulator.cumulate(ctx.alloc(), cumulation, data);
                 }
+                // 开始解码。
                 callDecode(ctx, cumulation, out);
             } catch (DecoderException e) {
                 throw e;
@@ -402,14 +413,16 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      *
      * @param ctx           the {@link ChannelHandlerContext} which this {@link ByteToMessageDecoder} belongs to
      * @param in            the {@link ByteBuf} from which to read data
-     * @param out           the {@link List} to which decoded messages should be added
+     * @param out           the {@link List} to which decoded messages should be added   解码后的数据存放处
      */
     protected void callDecode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
         try {
+            // 循环的条件为，ByteBuf中有可读内容！
             while (in.isReadable()) {
                 int outSize = out.size();
 
                 if (outSize > 0) {
+                    // 有解码成功的数据，驱动解码后的内容在Pipeline中进行传播
                     fireChannelRead(ctx, out, outSize);
                     out.clear();
 
@@ -425,6 +438,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                 }
 
                 int oldInputLength = in.readableBytes();
+                // 请求解码器
                 decodeRemovalReentryProtection(ctx, in, out);
 
                 // Check if this handler was removed before continuing the loop.
@@ -434,21 +448,22 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                 if (ctx.isRemoved()) {
                     break;
                 }
-
+                // 没有解码出内容
                 if (outSize == out.size()) {
+                    // 并且ByteBuf读指针位置未移动，则很有可能出现了半包消息，直接退出循环。
                     if (oldInputLength == in.readableBytes()) {
                         break;
                     } else {
                         continue;
                     }
                 }
-
+                // 没有从ByteBuf中读取任何内容，但却解码出了一个消息
                 if (oldInputLength == in.readableBytes()) {
                     throw new DecoderException(
                             StringUtil.simpleClassName(getClass()) +
                                     ".decode() did not read anything but decoded a message.");
                 }
-
+                // 只解码一次，则直接退出
                 if (isSingleDecode()) {
                     break;
                 }
@@ -486,6 +501,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
             throws Exception {
         decodeState = STATE_CALLING_CHILD_DECODE;
         try {
+            // 请求抽象方法继承子类，调用解码方法。将ByteBuf中的数组内容转换成POJO对象
             decode(ctx, in, out);
         } finally {
             boolean removePending = decodeState == STATE_HANDLER_REMOVED_PENDING;

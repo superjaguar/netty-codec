@@ -94,6 +94,9 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 ((SocketChannelConfig) config).isAllowHalfClosure();
     }
 
+    /**
+     * Channel数据流的读写
+     */
     protected class NioByteUnsafe extends AbstractNioUnsafe {
 
         private void closeOnRead(ChannelPipeline pipeline) {
@@ -128,6 +131,9 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             }
         }
 
+        /**
+         * 从Channel中读取数据。
+         */
         @Override
         public final void read() {
             final ChannelConfig config = config();
@@ -145,6 +151,8 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             try {
                 do {
                     byteBuf = allocHandle.allocate(allocator);
+                    // 执行消息的异步读取 doReadBytes(byteBuf)，将Channel中就绪的码流读取到ByteBuf
+                    // TODO:观察这边读取到的是不是一个完整的数据包请求！  在服务端使用简单的调试就OK。
                     allocHandle.lastBytesRead(doReadBytes(byteBuf));
                     if (allocHandle.lastBytesRead() <= 0) {
                         // nothing was read. release the buffer.
@@ -160,10 +168,15 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
                     allocHandle.incMessagesRead(1);
                     readPending = false;
+                    // 完成一次异步读操作之后，就会触发一次ChannelRead事件。
+                    // 如果使用了半包编解码技术，那每次读取的长度应该是固定的吧？不对，是一块连续的buffer缓冲区，
+                    // 读了哪些内容，就把读指针往前移动多少位
+                    // 如果使用了半包编解码技术，那么每次读取到的内容就是一个整包内容！
+                    // 应该是一次读一批大的！又说不通！明天调试一把！！！
                     pipeline.fireChannelRead(byteBuf);
                     byteBuf = null;
                 } while (allocHandle.continueReading());
-
+                // 记录此次读取的字节数，记录到分配器中，为下次读取选择合适的缓冲区容量。
                 allocHandle.readComplete();
                 pipeline.fireChannelReadComplete();
 
@@ -244,9 +257,15 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             // Should not reach here.
             throw new Error();
         }
+        // TCP发送缓冲区已满
         return WRITE_STATUS_SNDBUF_FULL;
     }
 
+    /**
+     * 执行flush方法，将环形数组中的内容写入Channel时调用
+     * @param in 待发送的环形数组缓冲区
+     * @throws Exception
+     */
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
         int writeSpinCount = config().getWriteSpinCount();
@@ -295,6 +314,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             clearOpWrite();
 
             // Schedule flush again later so other tasks can be picked up in the meantime
+            // 定期刷新，可以同时让其他的tasks被Selector到
             eventLoop().execute(flushTask);
         }
     }
@@ -319,6 +339,9 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
      */
     protected abstract int doWriteBytes(ByteBuf buf) throws Exception;
 
+    /**
+     * 更新SelectionKey的写操作位
+     */
     protected final void setOpWrite() {
         final SelectionKey key = selectionKey();
         // Check first if the key is still valid as it may be canceled as part of the deregistration

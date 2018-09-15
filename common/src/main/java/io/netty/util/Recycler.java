@@ -34,7 +34,7 @@ import static java.lang.Math.min;
 
 /**
  * Light-weight object pool based on a thread-local stack.
- *
+ * 轻量级内存池技术的核心实现
  * @param <T> the type of the pooled object
  */
 public abstract class Recycler<T> {

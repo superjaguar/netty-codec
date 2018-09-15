@@ -291,6 +291,11 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         doBind0(localAddress);
     }
 
+    /**
+     * 绑定本地端口
+     * @param localAddress
+     * @throws Exception
+     */
     private void doBind0(SocketAddress localAddress) throws Exception {
         if (PlatformDependent.javaVersion() >= 7) {
             SocketUtils.bind(javaChannel(), localAddress);
@@ -299,6 +304,13 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         }
     }
 
+    /**
+     * 发起远程连接
+     * @param remoteAddress
+     * @param localAddress
+     * @return
+     * @throws Exception
+     */
     @Override
     protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
         if (localAddress != null) {
@@ -308,6 +320,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         boolean success = false;
         try {
             boolean connected = SocketUtils.connect(javaChannel(), remoteAddress);
+            // 连接失败，则将SelectionKey设置为OP_CONNECT，监听连接网络操作位。
             if (!connected) {
                 selectionKey().interestOps(SelectionKey.OP_CONNECT);
             }
@@ -348,6 +361,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     @Override
     protected int doWriteBytes(ByteBuf buf) throws Exception {
         final int expectedWrittenBytes = buf.readableBytes();
+        // 将当前ByteBuf中的内容写入到Channel中进行发送，具体实现由ByteBuf子类进行
         return buf.readBytes(javaChannel(), expectedWrittenBytes);
     }
 
@@ -370,6 +384,11 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         }
     }
 
+    /**
+     * ChannelOutboundBuffer 需要写入Channel中的Buffer，使用环形数组存储
+     * @param in
+     * @throws Exception
+     */
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
         SocketChannel ch = javaChannel();
@@ -414,15 +433,20 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                     // Zero length buffers are not added to nioBuffers by ChannelOutboundBuffer, so there is no need
                     // to check if the total size of all the buffers is non-zero.
                     // We limit the max amount to int above so cast is safe
+                    // 当前需要写入TCP缓冲区的字节数
                     long attemptedBytes = in.nioBufferSize();
+                    // 返回值为写入SocketChannel的字节个数
                     final long localWrittenBytes = ch.write(nioBuffers, 0, nioBufferCnt);
+                    // 写入数为0，说明当前TCP发送缓冲区已满。
                     if (localWrittenBytes <= 0) {
+                        // 设置半包标志为true
                         incompleteWrite(true);
                         return;
                     }
                     // Casting to int is safe because we limit the total amount of data in the nioBuffers to int above.
                     adjustMaxBytesPerGatheringWrite((int) attemptedBytes, (int) localWrittenBytes,
                             maxBytesPerGatheringWrite);
+                    // 将当前已经写入成功的自己从缓冲区中删除
                     in.removeBytes(localWrittenBytes);
                     --writeSpinCount;
                     break;

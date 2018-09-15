@@ -123,6 +123,10 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         return name;
     }
 
+    /**
+     * 从head开始遍历，找到实现了ChannelInboundHandler接口的Handler
+     * @return
+     */
     @Override
     public ChannelHandlerContext fireChannelRegistered() {
         invokeChannelRegistered(findContextInbound());
@@ -357,6 +361,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
     }
 
     private void invokeChannelRead(Object msg) {
+        // 有关心该事件的Handler，则交给该Handler进行处理
         if (invokeHandler()) {
             try {
                 ((ChannelInboundHandler) handler()).channelRead(this, msg);
@@ -931,6 +936,10 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         return false;
     }
 
+    /**
+     * 循环遍历，找到实现了Inbound接口的handler
+     * @return
+     */
     private AbstractChannelHandlerContext findContextInbound() {
         AbstractChannelHandlerContext ctx = this;
         do {

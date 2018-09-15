@@ -38,11 +38,15 @@ public final class DefaultEventExecutorChooserFactory implements EventExecutorCh
             return new GenericEventExecutorChooser(executors);
         }
     }
-
+    // 判断是否为2的幂次方  - 对所有位上的数据取反，再+1
     private static boolean isPowerOfTwo(int val) {
         return (val & -val) == val;
+        // return val & (val - 1) == 0
     }
 
+    /**
+     * 2的幂等次方个executors时，选择下一个的方式，轮询
+     */
     private static final class PowerOfTwoEventExecutorChooser implements EventExecutorChooser {
         private final AtomicInteger idx = new AtomicInteger();
         private final EventExecutor[] executors;
@@ -57,6 +61,9 @@ public final class DefaultEventExecutorChooserFactory implements EventExecutorCh
         }
     }
 
+    /**
+     * 普通选择下一个eventLoop类，与总数取余，轮询到下一个
+     */
     private static final class GenericEventExecutorChooser implements EventExecutorChooser {
         private final AtomicInteger idx = new AtomicInteger();
         private final EventExecutor[] executors;

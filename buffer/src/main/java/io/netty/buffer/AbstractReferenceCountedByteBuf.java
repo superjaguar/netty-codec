@@ -24,6 +24,7 @@ import static io.netty.util.internal.ObjectUtil.checkPositive;
 
 /**
  * Abstract base class for {@link ByteBuf} implementations that count references.
+ * 对引用进行计数
  */
 public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
 
@@ -49,6 +50,10 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
         refCntUpdater.set(this, refCnt);
     }
 
+    /**
+     * 每被引用一次，计数+1，初始值为1
+     * @return
+     */
     @Override
     public ByteBuf retain() {
         return retain0(1);

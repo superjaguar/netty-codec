@@ -23,6 +23,7 @@ public interface ChannelInboundHandler extends ChannelHandler {
 
     /**
      * The {@link Channel} of the {@link ChannelHandlerContext} was registered with its {@link EventLoop}
+     * 当前Channel的ChannelHandlerContext被这注册到EventLoop线程上。
      */
     void channelRegistered(ChannelHandlerContext ctx) throws Exception;
 

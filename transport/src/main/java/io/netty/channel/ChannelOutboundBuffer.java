@@ -40,6 +40,7 @@ import static java.lang.Math.min;
 /**
  * (Transport implementors only) an internal data structure used by {@link AbstractChannel} to store its pending
  * outbound write requests.
+ * 给AbstractChannel用来存储需要发送的请求 --  一个Channel对应一个物理连接。
  * <p>
  * All methods must be called by a transport implementation from an I/O thread, except the following ones:
  * <ul>
